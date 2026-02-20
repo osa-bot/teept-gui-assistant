@@ -11,6 +11,27 @@ class_map = {'0':'Button', '1':'CheckBox', '2':'Chronometer', '3':'EditText', '4
 
 
 def resize_label(bboxes, d_height, gt_height, bias=0):
+    """
+    Resizes bounding boxes to match target dimensions by applying a height-based scale factor.
+    
+    This method normalizes bounding box coordinates detected in one image/region to match
+    their corresponding positions in another image/region by computing the ratio between
+    target and source heights. This is essential for aligning UI element detections across
+    different screen resolutions or scaled regions, ensuring that detected components can be
+    accurately mapped and interacted with regardless of dimensional variations.
+    
+    Args:
+        bboxes: A list of bounding boxes, where each bounding box is a list of
+            numeric coordinates to be scaled.
+        d_height: The height of the detection or source image/region.
+        gt_height: The height of the ground truth or target image/region.
+        bias: An optional offset value to add to each scaled coordinate after
+            scaling. Defaults to 0.
+    
+    Returns:
+        A list of resized bounding boxes, where each bounding box contains scaled
+        and bias-adjusted integer coordinates.
+    """
     bboxes_new = []
     scale = gt_height / d_height
     for bbox in bboxes:
@@ -20,6 +41,25 @@ def resize_label(bboxes, d_height, gt_height, bias=0):
 
 
 def draw_bounding_box(org, corners, color=(0, 255, 0), line=2, show=False):
+    """
+    Visualizes detected bounding boxes on an image for UI element identification and verification.
+    
+    This method overlays rectangular outlines on an image to highlight the locations of detected
+    UI elements or regions of interest. This visual feedback is essential for verifying that the
+    system has correctly identified and located the components needed for task execution.
+    
+    Args:
+        org: The original image on which bounding boxes will be drawn.
+        corners: A list of bounding box coordinates where each element contains
+            the top-left (x1, y1) and bottom-right (x2, y2) corner coordinates of a box.
+        color: The color of the bounding box rectangles in BGR format. Defaults to green (0, 255, 0).
+        line: The thickness of the bounding box lines in pixels. Defaults to 2.
+        show: A boolean flag indicating whether to display the resulting image
+            in a window for immediate visual inspection. Defaults to False.
+    
+    Returns:
+        The image with bounding boxes drawn on it, with original image unchanged.
+    """
     board = org.copy()
     for i in range(len(corners)):
         board = cv2.rectangle(board, (corners[i][0], corners[i][1]), (corners[i][2], corners[i][3]), color, line)
@@ -30,6 +70,25 @@ def draw_bounding_box(org, corners, color=(0, 255, 0), line=2, show=False):
 
 
 def load_detect_result_json(reslut_file_root, shrink=4):
+    """
+    Loads detection results from JSON files and extracts valid UI components for task guidance.
+    
+    This method reads detection result JSON files from a specified directory and filters
+    UI components based on size and position criteria to identify actionable interface elements.
+    The filtered components are reformatted into a structured dictionary that maps detected
+    bounding boxes and categories for each image, enabling the system to provide accurate
+    visual guidance and element matching during task execution.
+    
+    Args:
+        reslut_file_root: The root directory path containing JSON detection result files.
+        shrink: The pixel amount to shrink bounding boxes inward from all sides (default: 4).
+    
+    Returns:
+        A dictionary mapping image names to their component data. Each image name
+        key contains a dictionary with 'bboxes' (list of adjusted bounding box
+        coordinates as [column_min, row_min, column_max, row_max]) and 'categories'
+        (list of component category labels).
+    """
     def is_bottom_or_top(corner):
         column_min, row_min, column_max, row_max = corner
         if row_max < 36 or row_min > 725:
@@ -57,6 +116,24 @@ def load_detect_result_json(reslut_file_root, shrink=4):
 
 
 def load_ground_truth_json(gt_file):
+    """
+    Loads ground truth annotations from a JSON file and organizes them by image for UI component detection and analysis.
+    
+    This method reads a JSON file containing image and annotation data in COCO format, processes
+    bounding boxes and category information, and returns a dictionary mapping image names to their 
+    corresponding UI components. This enables the system to maintain reference data for validating 
+    detected UI elements against known ground truth annotations.
+    
+    Args:
+        gt_file: Path to the JSON file containing ground truth annotations in COCO format.
+    
+    Returns:
+        A dictionary where keys are image names (without extension) and values are
+        dictionaries containing:
+        - 'bboxes': List of bounding boxes in [col_min, row_min, col_max, row_max] format
+        - 'categories': List of category names mapped from category IDs
+        - 'size': Tuple of (image height, image width)
+    """
     def get_img_by_id(img_id):
         for image in images:
             if image['id'] == img_id:
@@ -86,6 +163,31 @@ def load_ground_truth_json(gt_file):
 
 
 def eval(detection, ground_truth, img_root, show=True, no_text=False, only_text=False):
+    """
+    Evaluates detection results against ground truth annotations to measure UI component detection accuracy.
+    
+    This method compares detected UI components with ground truth annotations across multiple images,
+    calculating precision, recall, and F1 scores using Intersection over Union (IoU) and Intersection over Detection (IoD) metrics.
+    It supports filtering by component type (text vs non-text) and can visualize results by drawing bounding boxes on images.
+    The evaluation helps assess how well the UI element detection system identifies and localizes interactive components,
+    which is essential for accurate task automation and user guidance.
+    
+    Args:
+        detection (dict): Dictionary mapping image IDs to detected components. Each component contains:
+            - 'bboxes': List of bounding boxes in format [col_min, row_min, col_max, row_max]
+            - 'categories': List of component types (e.g., 'TextView', button types)
+        ground_truth (dict): Dictionary mapping image IDs to ground truth components with the same structure as detection,
+            including 'size' field containing original image height.
+        img_root (str): Root directory path where image files are located (images should be named as image_id + '.jpg').
+        show (bool, optional): Boolean flag to display per-image results and visualizations. Defaults to True.
+        no_text (bool, optional): Boolean flag to exclude TextView components from evaluation. Defaults to False.
+        only_text (bool, optional): Boolean flag to evaluate only TextView components. Defaults to False.
+    
+    Returns:
+        tuple: Three lists containing per-image precision, recall, and F1 scores respectively.
+            Also prints cumulative and per-image metrics to console, including true positives, false positives,
+            and false negatives counts.
+    """
     def compo_filter(compos, flag):
         if not no_text and not only_text:
             return compos

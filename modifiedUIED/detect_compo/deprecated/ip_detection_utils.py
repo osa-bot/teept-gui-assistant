@@ -159,6 +159,26 @@ C = Config()
 # -> up, bottom: (column_index, min/max row border)
 # -> left, right: (row_index, min/max column border) detect range of each row
 def clipping_by_line(boundary, boundary_rec, lines):
+    """
+    Segments a boundary region by horizontal dividing lines to identify distinct rectangular areas within the UI layout.
+    
+    This method processes horizontal lines to partition a boundary into sub-regions, enabling the system to map
+    and track distinct UI areas. For each pair of consecutive horizontal lines, it extracts the boundary portions
+    that fall within the corresponding column range, adjusts the left and right borders to align with the column
+    boundaries, and records each resulting sub-region. This segmentation is essential for creating a structured
+    grid representation of the screen that can be used for element detection and user guidance.
+    
+    Args:
+        boundary: A list of four elements representing the top, bottom, left, and right borders of the region
+            to be segmented. Each border is a list of coordinate tuples (row, column).
+        boundary_rec: A list that accumulates the segmented boundary regions. Each sub-region is appended
+            as a new boundary definition [top, bottom, left, right].
+        lines: A dictionary containing line information organized by orientation. The 'h' key maps to a list
+            of horizontal lines, where each line is represented as a tuple (row_index, column_position).
+    
+    Returns:
+        None. The method modifies boundary_rec in-place by appending the segmented boundary regions.
+    """
     boundary = boundary.copy()
     for orient in lines:
         # horizontal

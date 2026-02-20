@@ -4,6 +4,23 @@ import io
 from config import GRID
 
 def take_screenshot():
+    """
+    Captures a screenshot and overlays a 3x3 grid with labeled regions for task guidance.
+    
+    This method captures the current screen and divides it into a 3x3 grid to provide visual 
+    guidance for user interactions. Each grid cell is labeled with its coordinates, enabling 
+    users to understand which screen region corresponds to specific actionable areas during 
+    task execution. The grid serves as a reference system for mapping server-provided 
+    instructions to actual screen locations.
+    
+    Args:
+        None
+    
+    Returns:
+        tuple: A tuple containing:
+            - screenshot (PIL.Image): PIL Image object of the screenshot with grid overlay and coordinate labels.
+            - buffered (io.BytesIO): BytesIO buffer containing the JPEG-encoded screenshot for transmission or storage.
+    """
     # Сделать скриншот
     screenshot = pyautogui.screenshot()
 
@@ -56,6 +73,20 @@ def take_screenshot():
     return screenshot, buffered
     
 def display_sent_image(screenshot):
+    """
+    Displays a screenshot for visual feedback during task execution.
+    
+    This method renders a screenshot in a separate window to provide users with
+    real-time visual confirmation of the current state of the desktop task being
+    executed. The window title identifies the image as a sent/captured screenshot,
+    helping users track the progression of automated actions and UI element detection.
+    
+    Args:
+        screenshot: The image object containing the captured screenshot to be displayed.
+    
+    Returns:
+        None
+    """
     # Отображаем изображение в отдельном окне
     screenshot.show(title="Отправленное изображение")
     

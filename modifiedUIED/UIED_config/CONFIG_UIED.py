@@ -1,6 +1,58 @@
 class Config:
+    """
+    Manages configuration parameters and thresholds for UI component detection and classification.
+    
+        This class centralizes all configuration settings used throughout the UI component detection pipeline,
+        including geometric thresholds for shape detection, text analysis parameters, and visual classification
+        mappings. It provides lookup tables that map numeric class indices to UI component type names and
+        defines color schemes for visualization purposes.
+    
+        Methods:
+        - __init__: Initialize the configuration with threshold values and classification mappings.
+    
+        Attributes:
+        - THRESHOLD_REC_MIN_EVENNESS: Minimum evenness ratio for rectangle detection.
+        - THRESHOLD_REC_MAX_DENT_RATIO: Maximum dent ratio allowed for rectangles.
+        - THRESHOLD_LINE_THICKNESS: Maximum thickness for line detection in pixels.
+        - THRESHOLD_LINE_MIN_LENGTH: Minimum length ratio for valid lines.
+        - THRESHOLD_COMPO_MAX_SCALE: Maximum height and width ratio tuple for atomic components.
+        - THRESHOLD_TEXT_MAX_WORD_GAP: Maximum gap between words in text regions.
+        - THRESHOLD_TEXT_MAX_HEIGHT: Maximum height ratio for text elements.
+        - THRESHOLD_TOP_BOTTOM_BAR: Height ratio tuple for top and bottom bars.
+        - THRESHOLD_BLOCK_MIN_HEIGHT: Minimum height ratio for blocks.
+        - CLASS_MAP: Dictionary mapping numeric class indices to UI component type names.
+        - COLOR: Dictionary mapping component types and classification labels to BGR color tuples for visualization.
+    """
+
 
     def __init__(self):
+        """
+        Initialize configuration parameters for UI component detection and classification.
+        
+        This constructor establishes all threshold values and lookup tables necessary for detecting,
+        classifying, and visualizing UI components in screenshots. By configuring geometric thresholds,
+        text properties, and component boundaries, it enables accurate identification of interactive
+        elements that can be targeted during task automation workflows.
+        
+        Args:
+            self: The instance being initialized.
+        
+        Returns:
+            None
+        
+        Attributes:
+            THRESHOLD_REC_MIN_EVENNESS (float): Minimum evenness ratio for rectangle detection (0.7).
+            THRESHOLD_REC_MAX_DENT_RATIO (float): Maximum dent ratio allowed for rectangles (0.25).
+            THRESHOLD_LINE_THICKNESS (int): Maximum thickness for line detection in pixels (8).
+            THRESHOLD_LINE_MIN_LENGTH (float): Minimum length ratio for valid lines (0.95).
+            THRESHOLD_COMPO_MAX_SCALE (tuple): Maximum height and width ratio for atomic components (0.25, 0.98).
+            THRESHOLD_TEXT_MAX_WORD_GAP (int): Maximum gap between words in text regions (10).
+            THRESHOLD_TEXT_MAX_HEIGHT (float): Maximum height ratio for text elements (0.04).
+            THRESHOLD_TOP_BOTTOM_BAR (tuple): Height ratio tuple for top and bottom bars (0.045, 0.94).
+            THRESHOLD_BLOCK_MIN_HEIGHT (float): Minimum height ratio for blocks (0.03).
+            CLASS_MAP (dict): Mapping of numeric class indices to UI component type names for classification.
+            COLOR (dict): Mapping of component types and labels to BGR color tuples for visual feedback overlays.
+        """
         # Adjustable
         # self.THRESHOLD_PRE_GRADIENT = 4             # dribbble:4 rico:4 web:1
         # self.THRESHOLD_OBJ_MIN_AREA = 55            # bottom line 55 of small circle

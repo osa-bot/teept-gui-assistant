@@ -11,10 +11,23 @@ C = Config()
 
 def merge_intersected_corner(compos, org, is_merge_contained_ele, max_gap=(0, 0), max_ele_height=25):
     '''
-    :param is_merge_contained_ele: if true, merge compos nested in others
-    :param max_gap: (horizontal_distance, vertical_distance) to be merge into one line/column
-    :param max_ele_height: if higher than it, recognize the compo as text
-    :return:
+    Recursively merge UI components that intersect or are contained within each other to consolidate 
+    overlapping or adjacent elements into unified components. This process helps identify and group 
+    related UI elements that should be treated as single interactive units.
+    
+    Args:
+        compos (list): List of component objects to be merged
+        org: Original image/screenshot for coordinate reference and shape information
+        is_merge_contained_ele (bool): If True, merge components that are nested within other components
+        max_gap (tuple): Maximum (horizontal_distance, vertical_distance) threshold for merging 
+                         components into aligned rows or columns. Defaults to (0, 0)
+        max_ele_height (int): Height threshold in pixels; components exceeding this are classified 
+                              as text elements. Defaults to 25
+    
+    Returns:
+        list: Merged list of components with intersecting or contained elements consolidated into 
+              single components. Returns original list if no merging occurred, otherwise returns 
+              recursively merged result
     '''
     changed = False
     new_compos = []
@@ -51,6 +64,26 @@ def merge_intersected_corner(compos, org, is_merge_contained_ele, max_gap=(0, 0)
 
 
 def merge_intersected_compos(compos):
+    """
+    Merges intersected components by iteratively combining overlapping components.
+    
+    This method processes a list of components and consolidates any that overlap,
+    ensuring that detected UI elements are properly unified into distinct, non-overlapping
+    regions. It repeatedly iterates through the components, checking each pair for
+    intersection and merging them when detected, until no further merges are possible.
+    This is essential for maintaining accurate UI element representation and preventing
+    duplicate or fragmented component detection.
+    
+    Args:
+        compos: A list of component objects to be merged. Each component should
+            have compo_relation and compo_merge methods for intersection detection
+            and merging operations.
+    
+    Returns:
+        A list of merged components with all intersections resolved. Components
+        that intersected with others have been combined, and the final list
+        contains no overlapping components.
+    """
     changed = True
     while changed:
         changed = False
@@ -71,7 +104,21 @@ def merge_intersected_compos(compos):
 
 def rm_contained_compos_not_in_block(compos):
     '''
-    remove all components contained by others that are not Block
+    Filter out redundant UI components that are spatially contained within other components.
+    
+    Removes components that are completely enclosed by other components, except for Block-type
+    components which are preserved to maintain structural hierarchy. This prevents duplicate
+    detection of nested UI elements and ensures only the most relevant components are retained
+    for interaction and analysis.
+    
+    Args:
+        compos (list): A list of component objects, each with a 'category' attribute and
+                       a 'compo_relation' method that returns spatial relationship information.
+    
+    Returns:
+        list: A filtered list of components with contained non-Block components removed.
+              Components that contain others or are not contained by any other component
+              are preserved.
     '''
     marked = np.full(len(compos), False)
     for i in range(len(compos) - 1):
@@ -89,6 +136,29 @@ def rm_contained_compos_not_in_block(compos):
 
 
 def merge_text(compos, org_shape, max_word_gad=4, max_word_height=20):
+    """
+    Recursively merges adjacent text components that are on the same line to consolidate fragmented UI elements into cohesive text regions.
+    
+    This method identifies text components that are horizontally aligned and close together, then merges them into single components. The process repeats until no more merges are possible. This is essential for accurately reconstructing text content from detected UI elements, ensuring that words or phrases split across multiple detection regions are properly unified for downstream processing and interaction.
+    
+    Args:
+        compos: A list of component objects to be merged. Each component has methods
+            put_bbox() to get bounding box coordinates (col_min, row_min, col_max, row_max)
+            and compo_merge() to merge with another component.
+        org_shape: The original shape of the image or canvas, used to provide context
+            for the components. Typically a tuple containing (height, width, ...).
+        max_word_gad: The maximum horizontal gap (in pixels) allowed between two
+            components for them to be considered part of the same text line.
+            Default is 4 pixels.
+        max_word_height: The maximum height (in pixels) for a component to be
+            considered as text. Components taller than this are not merged.
+            Default is 20 pixels.
+    
+    Returns:
+        A list of merged component objects. If no merges were performed, returns
+        the original compos list. Otherwise, returns a recursively merged list
+        where all eligible text components on the same line have been combined.
+    """
     def is_text_line(compo_a, compo_b):
         (col_min_a, row_min_a, col_max_a, row_max_a) = compo_a.put_bbox()
         (col_min_b, row_min_b, col_max_b, row_max_b) = compo_b.put_bbox()
@@ -137,6 +207,32 @@ def merge_text(compos, org_shape, max_word_gad=4, max_word_height=20):
 
 
 def rm_top_or_bottom_corners(components, org_shape, top_bottom_height=C.THRESHOLD_TOP_BOTTOM_BAR):
+    """
+    Filters out components located in the top or bottom corners of an image to isolate
+    the main content area for UI element detection and analysis.
+    
+    This method removes components that fall within specified threshold regions at the
+    top and bottom of the image, typically used to exclude header and footer bars that
+    are not part of the interactive content. This filtering is essential for accurately
+    identifying and locating actionable UI components within the primary content region.
+    
+    Args:
+        components: A list of component objects to filter, where each component has
+            a put_bbox() method that returns bounding box coordinates as
+            (column_min, row_min, column_max, row_max).
+        org_shape: A tuple or array containing the original image dimensions, where
+            the first two elements are height and width respectively.
+        top_bottom_height: A tuple of two float values representing the threshold
+            ratios for the top and bottom regions. The first value defines the
+            bottom boundary of the top region (as a fraction of image height),
+            and the second value defines the top boundary of the bottom region
+            (as a fraction of image height). Defaults to C.THRESHOLD_TOP_BOTTOM_BAR.
+    
+    Returns:
+        A list of component objects that are not located in the top or bottom
+        corner regions as defined by the threshold parameters, representing the
+        main content area components suitable for UI analysis and interaction.
+    """
     new_compos = []
     height, width = org_shape[:2]
     for compo in components:
@@ -150,6 +246,29 @@ def rm_top_or_bottom_corners(components, org_shape, top_bottom_height=C.THRESHOL
 
 
 def rm_line_v_h(binary, show=False, max_line_thickness=C.THRESHOLD_LINE_THICKNESS):
+    """
+    Removes vertical and horizontal lines from a binary image to isolate UI content.
+    
+    This method detects and extracts continuous vertical and horizontal lines from
+    a binary image, then removes them by subtracting the detected line areas from
+    the original image. This preprocessing step helps isolate meaningful UI elements
+    by eliminating structural lines that may interfere with element detection and
+    analysis. Lines are identified based on continuous pixel regions that span at
+    least 60% of the image dimension (width for horizontal lines, height for vertical
+    lines) and have a thickness below the specified threshold.
+    
+    Args:
+        binary (numpy.ndarray): A binary image from which lines will be removed.
+        show (bool, optional): A boolean flag indicating whether to display intermediate
+            results using OpenCV image windows. Defaults to False.
+        max_line_thickness (int, optional): The maximum thickness (in pixels) for a
+            region to be considered a line. Regions thicker than this value are not
+            removed. Defaults to C.THRESHOLD_LINE_THICKNESS.
+    
+    Returns:
+        numpy.ndarray: The modified binary image with detected vertical and horizontal
+            lines removed (subtracted from the original image).
+    """
     def check_continuous_line(line, edge):
         continuous_length = 0
         line_start = -1
@@ -227,6 +346,30 @@ def rm_line(binary,
             max_line_thickness=C.THRESHOLD_LINE_THICKNESS,
             min_line_length_ratio=C.THRESHOLD_LINE_MIN_LENGTH,
             show=False, wait_key=0):
+    """
+    Removes horizontal lines from a binary image to clean up document structure for UI element detection.
+    
+    This method identifies and removes horizontal lines from a binary image by analyzing
+    consecutive rows for valid line patterns. A line is considered valid if it spans a
+    significant portion of the image width with minimal gaps. Lines are removed if they
+    are thin enough and either reach the image boundaries or have sufficient gaps between
+    them. This preprocessing step helps isolate UI components by eliminating structural
+    lines that may interfere with element detection and analysis.
+    
+    Args:
+        binary: A binary image (numpy array) from which lines will be removed.
+        max_line_thickness: Maximum thickness in pixels for a valid line to be removed.
+            Defaults to C.THRESHOLD_LINE_THICKNESS.
+        min_line_length_ratio: Minimum ratio of line length to image width for validity.
+            Defaults to C.THRESHOLD_LINE_MIN_LENGTH.
+        show: Whether to display the resulting image with lines removed. Defaults to False.
+        wait_key: Key wait time in milliseconds for the displayed image. If 0, the window
+            is destroyed immediately after display. Defaults to 0.
+    
+    Returns:
+        None. The method modifies the binary image in-place by setting identified line
+        regions to 0 (black).
+    """
     def is_valid_line(line):
         line_length = 0
         line_gap = 0
@@ -285,6 +428,22 @@ def rm_line(binary,
 
 
 def rm_noise_compos(compos):
+    """
+    Removes noise components from a composition list to ensure only meaningful UI elements are retained for analysis.
+    
+    This method filters out all components with a category of 'Noise' from the
+    provided composition list, returning a new list containing only non-noise
+    components. This is essential for maintaining clean detection results when
+    analyzing UI elements, as noise components can interfere with accurate element
+    matching and interaction guidance.
+    
+    Args:
+        compos: A list of composition objects to filter.
+    
+    Returns:
+        list: A new list containing all components from the input list except those
+        with a category of 'Noise'.
+    """
     compos_new = []
     for compo in compos:
         if compo.category == 'Noise':
@@ -295,6 +454,26 @@ def rm_noise_compos(compos):
 
 def rm_noise_in_large_img(compos, org,
                       max_compo_scale=C.THRESHOLD_COMPO_MAX_SCALE):
+    """
+    Filters out noise components that are contained within larger image-category components.
+    
+    This method identifies and removes UI elements that are nested within image components,
+    keeping only the top-level components that are not contained by any image-category elements.
+    This is essential for maintaining a clean component hierarchy when analyzing complex UI layouts,
+    ensuring that only meaningful, non-redundant UI elements are retained for further processing.
+    
+    Args:
+        compos: A list of component objects detected in the image, each with
+            category and contain attributes.
+        org: The original image as a numpy array from which components were detected.
+        max_compo_scale: The maximum scale threshold for component filtering
+            (default uses C.THRESHOLD_COMPO_MAX_SCALE constant).
+    
+    Returns:
+        A filtered list of component objects with noise components removed,
+        containing only components that are not contained within larger
+        image-category components.
+    """
     row, column = org.shape[:2]
     remain = np.full(len(compos), True)
     new_compos = []
@@ -309,6 +488,27 @@ def rm_noise_in_large_img(compos, org,
 
 
 def detect_compos_in_img(compos, binary, org, max_compo_scale=C.THRESHOLD_COMPO_MAX_SCALE, show=False):
+    """
+    Detects and extracts rectangular components nested within image regions to support UI element analysis.
+    
+    This method identifies structural elements within image-type components by performing binary image
+    analysis on their regions. For each image component, it clips the binary representation to the component's
+    bounding box, inverts the binary values to highlight internal structures, and applies component detection
+    to extract rectangular sub-elements. This enables the system to discover and catalog UI components that
+    may be embedded within larger image regions, supporting comprehensive UI element mapping for task automation.
+    
+    Args:
+        compos: List of component objects to process, filtered for 'Image' category components.
+        binary: Binary image array used for component detection within image regions.
+        org: Original image array (used for reference, though not directly utilized in current implementation).
+        max_compo_scale: Maximum scale threshold for component filtering (default from C.THRESHOLD_COMPO_MAX_SCALE).
+        show: Boolean flag to control visualization of intermediate processing steps (default False).
+    
+    Returns:
+        None. The method modifies the input compos list in-place by appending newly detected
+        rectangular components that meet the filtering criteria (area ratio < 0.8 relative to
+        parent component, height > 20 pixels, width > 20 pixels).
+    """
     compos_new = []
     row, column = binary.shape[:2]
     for compo in compos:
@@ -336,6 +536,28 @@ def detect_compos_in_img(compos, binary, org, max_compo_scale=C.THRESHOLD_COMPO_
 
 
 def compo_filter(compos, min_area, img_shape):
+    """
+    Filters detected UI components based on size and shape constraints to identify valid interactive elements.
+    
+    This method removes components that are too small, too large, or have invalid aspect ratios,
+    ensuring only meaningful UI elements are retained for interaction guidance. Components are validated
+    against minimum area requirements, maximum height relative to image dimensions, and aspect ratio
+    constraints to eliminate noise, oversized elements, and extremely elongated or thin artifacts that
+    are unlikely to represent actionable UI components.
+    
+    Args:
+        compos: A list of component objects to be filtered, where each component has
+            properties like area, height, and width representing detected UI elements.
+        min_area: The minimum area threshold in pixels; components with area below this value
+            are excluded from the result.
+        img_shape: A tuple representing the image dimensions (height, width), where the first element
+            is the image height used to calculate the maximum allowable component height (80% of image height).
+    
+    Returns:
+        A list of filtered component objects that satisfy all filtering criteria: minimum
+        area requirement, maximum height constraint (80% of image height), and acceptable aspect ratios
+        (width/height ratio ≤ 50, height/width ratio ≤ 40, with stricter constraints for very small components).
+    """
     max_height = img_shape[0] * 0.8
     compos_new = []
     for compo in compos:
@@ -354,8 +576,21 @@ def compo_filter(compos, min_area, img_shape):
 
 def is_block(clip, thread=0.15):
     '''
-    Block is a rectangle border enclosing a group of compos (consider it as a wireframe)
-    Check if a compo is block by checking if the inner side of its border is blank
+    Detect if a rectangular region represents a block element (wireframe container) by analyzing the blankness of its inner borders.
+    
+    A block is a rectangle border that encloses a group of UI components, forming a wireframe-like structure.
+    This method validates whether a region qualifies as a block by scanning the inner edges of all four borders
+    and checking if they contain sufficient blank space, indicating an empty container rather than a filled element.
+    
+    Args:
+        clip: A 2D numpy array representing the image region to analyze (typically a binary or grayscale image).
+        thread (float): The threshold ratio (0.0-1.0) for determining if a border line is blank. 
+                       A line is considered blank if its non-zero pixel sum divided by 255 exceeds this threshold 
+                       multiplied by the line's length. Default is 0.15.
+    
+    Returns:
+        bool: True if the region is identified as a block (has blank inner borders on all sides), 
+              False otherwise.
     '''
     side = 4  # scan 4 lines inner forward each border
     # top border - scan top down
@@ -388,6 +623,26 @@ def is_block(clip, thread=0.15):
 
 
 def compo_block_recognition(binary, compos, block_side_length=0.15):
+    """
+    Recognizes and categorizes components as blocks based on size and content analysis.
+    
+    This method identifies substantial UI components that represent significant content areas
+    by analyzing their dimensions relative to the screen and validating their content structure.
+    Components meeting both size and content criteria are marked as 'Block' elements, enabling
+    the system to distinguish major content regions from smaller UI elements during screen analysis.
+    
+    Args:
+        binary: A binary image represented as a 2D array from which component dimensions
+            are derived.
+        compos: A list of component objects to be analyzed and potentially categorized.
+        block_side_length: The minimum relative size threshold (as a fraction of image
+            dimensions) that a component must exceed in both height and width to be
+            considered for block classification. Defaults to 0.15.
+    
+    Returns:
+        None. The method modifies the category attribute of component objects in-place,
+        setting the category to 'Block' for components that meet the size and content criteria.
+    """
     height, width = binary.shape
     for compo in compos:
         if compo.height / height > block_side_length and compo.width / width > block_side_length:
@@ -406,15 +661,32 @@ def component_detection(binary, min_obj_area,
                         step_h = 5, step_v = 2,
                         rec_detect=False, show=False, test=False):
     """
-    :param binary: Binary image from pre-processing
-    :param min_obj_area: If not pass then ignore the small object
-    :param min_obj_perimeter: If not pass then ignore the small object
-    :param line_thickness: If not pass then ignore the slim object
-    :param min_rec_evenness: If not pass then this object cannot be rectangular
-    :param max_dent_ratio: If not pass then this object cannot be rectangular
-    :return: boundary: [top, bottom, left, right]
-                        -> up, bottom: list of (column_index, min/max row border)
-                        -> left, right: list of (row_index, min/max column border) detect range of each row
+    Detects and extracts connected components from a binary image to identify UI elements and interactive regions.
+    
+    This method performs flood-fill based connected component analysis on a binary image to locate distinct
+    visual elements. Each detected component is validated against size and shape criteria to filter out noise
+    and irrelevant artifacts, ensuring only meaningful UI elements are extracted for further processing.
+    
+    Args:
+        binary (np.ndarray): Binary image from pre-processing where foreground pixels are 255.
+        min_obj_area (int): Minimum pixel area threshold; components smaller than this are discarded.
+        line_thickness (int, optional): Minimum thickness threshold to filter out line-like objects.
+            Defaults to C.THRESHOLD_LINE_THICKNESS.
+        min_rec_evenness (float, optional): Minimum evenness ratio for rectangular shape validation.
+            Defaults to C.THRESHOLD_REC_MIN_EVENNESS.
+        max_dent_ratio (float, optional): Maximum dent ratio for rectangular shape validation.
+            Defaults to C.THRESHOLD_REC_MAX_DENT_RATIO.
+        step_h (int, optional): Vertical step size for scanning pixels. Defaults to 5.
+        step_v (int, optional): Horizontal step size for scanning pixels. Defaults to 2.
+        rec_detect (bool, optional): If True, classifies components as rectangular or non-rectangular.
+            Defaults to False.
+        show (bool, optional): If True, displays detected components during processing. Defaults to False.
+        test (bool, optional): If True, enables debug output. Defaults to False.
+    
+    Returns:
+        list or tuple: If rec_detect is False, returns list of Component objects representing all detected
+            elements. If rec_detect is True, returns tuple of (compos_rec, compos_nonrec) where compos_rec
+            contains rectangular components and compos_nonrec contains non-rectangular components.
     """
     mask = np.zeros((binary.shape[0] + 2, binary.shape[1] + 2), dtype=np.uint8)
     compos_all = []
@@ -476,12 +748,32 @@ def nested_components_detection(grey, org, grad_thresh,
                    line_thickness=C.THRESHOLD_LINE_THICKNESS,
                    min_rec_evenness=C.THRESHOLD_REC_MIN_EVENNESS,
                    max_dent_ratio=C.THRESHOLD_REC_MAX_DENT_RATIO):
-    '''
-    :param grey: grey-scale of original image
-    :return: corners: list of [(top_left, bottom_right)]
-                        -> top_left: (column_min, row_min)
-                        -> bottom_right: (column_max, row_max)
-    '''
+    """
+    Detects rectangular UI components in an image by identifying connected regions of similar intensity.
+    
+    This method performs flood-fill based region detection to locate distinct UI blocks and containers
+    within a layout. It filters detected regions to retain only valid rectangular components that meet
+    geometric and structural criteria, excluding noise, lines, and overly large background areas.
+    
+    Args:
+        grey (np.ndarray): Grayscale image array for region detection
+        org (np.ndarray): Original image array for reference
+        grad_thresh (int): Gradient threshold for flood-fill algorithm
+        show (bool, optional): Whether to display intermediate detection results. Defaults to False
+        write_path (str, optional): File path to save detection visualization. Defaults to None
+        step_h (int, optional): Vertical step size for region scanning. Defaults to 10
+        step_v (int, optional): Horizontal step size for region scanning. Defaults to 10
+        line_thickness (int, optional): Maximum thickness to classify a region as a line. Defaults to C.THRESHOLD_LINE_THICKNESS
+        min_rec_evenness (float, optional): Minimum evenness ratio for rectangle validation. Defaults to C.THRESHOLD_REC_MIN_EVENNESS
+        max_dent_ratio (float, optional): Maximum dent ratio for rectangle validation. Defaults to C.THRESHOLD_REC_MAX_DENT_RATIO
+    
+    Returns:
+        list[Component]: List of detected rectangular components, each containing:
+            - Bounding box coordinates (top_left, bottom_right)
+            - top_left: (column_min, row_min)
+            - bottom_right: (column_max, row_max)
+            - Component properties (area, height, width, redundancy flag)
+    """
     compos = []
     mask = np.zeros((grey.shape[0]+2, grey.shape[1]+2), dtype=np.uint8)
     broad = np.zeros((grey.shape[0], grey.shape[1], 3), dtype=np.uint8)

@@ -48,9 +48,44 @@ translit_dict = str.maketrans(
 )
 
 def transliterate_text(text):
+    """
+    Transliterates text to enable consistent UI element matching across different character encodings.
+    
+    This method converts characters in the input text according to a predefined
+    transliteration mapping dictionary, ensuring that UI element descriptions and 
+    detected text can be reliably compared regardless of their original character encoding.
+    This is essential for accurately matching user-provided descriptions to detected 
+    UI components in the task automation workflow.
+    
+    Args:
+        text (str): The text string to be transliterated.
+    
+    Returns:
+        str: The transliterated text with characters replaced according to the
+            transliteration dictionary, suitable for consistent text comparison.
+    """
     return text.translate(translit_dict)
 
 def find_closest_text_match(target, components):
+    """
+    Finds the component with text content most similar to the target string.
+    
+    This method enables precise UI element matching by comparing a target string against
+    all components' text content using transliteration and sequence matching. By normalizing
+    both the target and component text through transliteration, the method handles variations
+    in character encodings and scripts, ensuring reliable component identification across
+    different UI contexts and languages.
+    
+    Args:
+        target: The reference text string to match against component text content.
+        components: A dictionary containing a 'compos' key with a list of component
+            objects, each potentially having a 'text_content' field.
+    
+    Returns:
+        A tuple containing the best matching component object and its similarity
+        score as a float between 0 and 1, where 1 indicates an exact match. Returns
+        (None, -1) if no components with text content are found.
+    """
     target_translit = transliterate_text(target)
     best_match, max_similarity = None, -1
 
@@ -65,6 +100,27 @@ def find_closest_text_match(target, components):
     return best_match, max_similarity
 
 def tryTofind(top, left, width, height, sct_img, description, mode, grid_x, grid_y):
+    """
+    Locates and highlights a UI element within a screen region based on user-provided criteria, then monitors user interaction with the detected element.
+    
+    This method analyzes a cropped screenshot to identify UI components, matches them against the provided description using either text-based OCR comparison or visual similarity analysis, and displays an interactive overlay to guide the user toward the target element. The method then waits for user confirmation of interaction with the highlighted element.
+    
+    The dual-mode matching approach allows flexible element detection: text mode compares OCR-extracted content from components, while image mode uses CLIP embeddings to match visual features. This enables the system to guide users to the correct UI element regardless of whether the search is based on visible text or visual appearance.
+    
+    Args:
+        top (int): The y-coordinate of the top edge of the search region in pixels.
+        left (int): The x-coordinate of the left edge of the search region in pixels.
+        width (int): The width of the search region in pixels.
+        height (int): The height of the search region in pixels.
+        sct_img (PIL.Image): A PIL Image object containing the screenshot to search within.
+        description (str): The search query - either text content to match or a description of visual features to compare.
+        mode (str): The search mode - "1" for text-based matching or "2" for image-based matching using vision-language embeddings.
+        grid_x (int): The x-coordinate grid position for monitoring user interaction on the detected element.
+        grid_y (int): The y-coordinate grid position for monitoring user interaction on the detected element.
+    
+    Returns:
+        bool: True if the user successfully interacted with the detected element, False if no matching element was found, an invalid mode was specified, or an error occurred during the search process.
+    """
     action_completed = False
     user_input = description
     description_features = None
@@ -212,6 +268,27 @@ def tryTofind(top, left, width, height, sct_img, description, mode, grid_x, grid
     return False
 
 def main():
+    """
+    Orchestrates an interactive task automation workflow by establishing server communication
+    and guiding users through step-by-step task completion with visual feedback.
+    
+    This method implements a multi-turn conversation loop where the system analyzes screenshots,
+    receives intelligent task instructions from the server, and provides real-time visual guidance
+    through a 3x3 grid overlay system. The workflow captures the current screen state, sends it
+    to the server for analysis and planning, receives the next action with target coordinates,
+    and displays an interactive overlay to guide the user to the correct UI element.
+    
+    The method maintains conversation history throughout the session, maps screen coordinates
+    to a 3x3 grid representation for intuitive user guidance, and iteratively requests new
+    instructions until the server confirms task completion. It handles both initial planning
+    and subsequent action steps, processing server responses that include task instructions,
+    action descriptions, target locations, and detection modes.
+    
+    Returns:
+        None. The method executes the task automation workflow, printing status messages,
+        action plans, and instructions to the console. It returns early if the initial
+        server connection fails or if the task plan cannot be retrieved.
+    """
     server_url = SERVER_URL
 
     # Инициализируем историю сообщений

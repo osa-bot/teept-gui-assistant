@@ -7,6 +7,27 @@ C = Config()
 
 
 def is_text(img, min_word_area, show=False):
+    """
+    Determines if an image contains meaningful text content by analyzing detected text regions.
+    
+    This method uses Tesseract OCR to identify and measure text regions within an image,
+    enabling the system to distinguish between UI elements that are text-based versus
+    graphical. By comparing the cumulative area of detected text against a configurable
+    threshold, it helps filter and classify screen regions during task automation workflows.
+    The method also supports visualization of detected text regions for debugging purposes.
+    
+    Args:
+        img: The input image to analyze for text content.
+        min_word_area: The minimum ratio of text area to total image area (0.0-1.0) required
+            to classify the image as containing meaningful text.
+        show: Optional flag to display detected text regions and area statistics for
+            debugging purposes. Defaults to False.
+    
+    Returns:
+        bool: True if the image contains text with area ratio exceeding min_word_area,
+            False if no text is detected or the text area ratio is below the threshold.
+        int: -1 if an error occurs during OCR processing.
+    """
     broad = img.copy()
     area_word = 0
     area_total = img.shape[0] * img.shape[1]
@@ -41,6 +62,27 @@ def is_text(img, min_word_area, show=False):
 
 
 def text_detection(org, img_clean):
+    """
+    Detects text regions in an image to identify UI elements for task automation.
+    
+    This method uses Pytesseract to extract text data from a preprocessed image and 
+    identifies word regions that meet specific size criteria. By filtering detected words 
+    based on height and width constraints, it extracts valid text bounding boxes that 
+    correspond to interactive UI components. These bounding boxes are essential for 
+    locating and matching UI elements during task execution.
+    
+    Args:
+        org: The original image object (used as fallback return value).
+        img_clean: The preprocessed image to perform text detection on.
+    
+    Returns:
+        A tuple containing:
+        - corners_word: A list of tuples representing bounding boxes of detected text regions.
+          Each tuple contains ((top_left_x, top_left_y), (bottom_right_x, bottom_right_y)).
+          Returns an empty list if no valid text regions are found.
+        - None: Returned as the second element, or the original image object is returned 
+          with None if an exception occurs during text extraction.
+    """
     try:
         data = pyt.image_to_data(img_clean).split('\n')
     except:

@@ -9,16 +9,23 @@ C = Config()
 
 def draw_bounding_box_class(org, components, color=C.COLOR, line=2, show=False, write_path=None):
     """
-    Draw bounding box of components with their classes on the original image
-    :param org: original image
-    :param components: bbox [(column_min, row_min, column_max, row_max)]
-                    -> top_left: (column_min, row_min)
-                    -> bottom_right: (column_max, row_max)
-    :param color_map: colors mapping to different components
-    :param line: line thickness
-    :param compo_class: classes matching the corners of components
-    :param show: show or not
-    :return: labeled image
+    Visualize detected UI components with their classification labels on the original image to provide interactive guidance for task automation.
+    
+    This method annotates the input image with bounding boxes and class labels for each detected component, enabling users to understand which UI elements have been identified and their corresponding types. This visual feedback is essential for verifying component detection accuracy and guiding users through the automated task workflow.
+    
+    Args:
+        org: Original input image (numpy array in BGR format)
+        components: Dictionary containing detected components with keys:
+            - 'bboxes': List of bounding boxes in format [(column_min, row_min, column_max, row_max)]
+                        where top_left: (column_min, row_min) and bottom_right: (column_max, row_max)
+            - 'categories': List of category indices corresponding to each bbox
+        color: Color mapping dictionary for different component classes (default: C.COLOR)
+        line: Thickness of bounding box lines in pixels (default: 2)
+        show: Whether to display the annotated image in a window (default: False)
+        write_path: Optional file path to save the annotated image (default: None)
+    
+    Returns:
+        Annotated image with drawn bounding boxes and class labels for all detected components
     """
     board = org.copy()
     bboxes = components['bboxes']
@@ -37,6 +44,24 @@ def draw_bounding_box_class(org, components, color=C.COLOR, line=2, show=False, 
 
 
 def load_ground_truth_json(gt_file, no_text=True):
+    """
+    Loads ground truth annotations from a JSON file and organizes them by image to support UI element detection and analysis.
+    
+    This method reads a COCO-format JSON file containing image and annotation data, extracts bounding boxes and categories for each image, and returns a dictionary mapping image names to their corresponding UI components. This enables the system to match detected UI elements against known ground truth data for validation and analysis purposes.
+    
+    Args:
+        gt_file: Path to the ground truth JSON file in COCO format containing
+            'images' and 'annotations' keys.
+        no_text: Flag to exclude text annotations (category_id == 14) from the
+            results. Defaults to True.
+    
+    Returns:
+        A dictionary where keys are image names (without extension) and values are
+        dictionaries containing:
+        - 'bboxes': List of bounding boxes in [col_min, row_min, col_max, row_max] format.
+        - 'categories': List of category IDs corresponding to each bounding box.
+        - 'size': Tuple of (height, width) for the image.
+    """
     def get_img_by_id(img_id):
         for image in images:
             if image['id'] == img_id:
@@ -69,6 +94,27 @@ def load_ground_truth_json(gt_file, no_text=True):
 
 
 def view_gt_all(gt, img_root):
+    """
+    Visualizes ground truth component annotations across all images in a dataset.
+        
+    This method iterates through all images in the ground truth dictionary,
+    loads each image from disk, and displays the associated bounding boxes
+    with their class labels overlaid on the image. This visualization helps
+    verify that UI components have been correctly detected and annotated,
+    ensuring the accuracy of the component detection pipeline before further
+    processing or model training.
+        
+    Args:
+        gt (dict): A dictionary mapping image identifiers to their corresponding
+            component/bounding box annotations. Each key is an image identifier
+            and each value contains the bounding box data for components in that image.
+        img_root (str): The root directory path where the image files are stored.
+            Images are expected to be named as '{img_id}.jpg'.
+        
+    Returns:
+        None. The method displays images with bounding boxes interactively but does not
+        return any value.
+    """
     for img_id in gt:
         compos = gt[img_id]
         img = cv2.imread(pjoin(img_root, img_id + '.jpg'))
@@ -77,6 +123,26 @@ def view_gt_all(gt, img_root):
 
 
 def view_gt_single(gt, img_root, img_id):
+    """
+    Visualizes ground truth UI component annotations for a single image.
+    
+    This method retrieves the annotated UI components for a specified image,
+    loads the image from disk, and displays the bounding boxes with their
+    class labels overlaid on the image. This is useful for verifying that
+    UI elements have been correctly identified and labeled during the annotation
+    process.
+    
+    Args:
+        gt: A dictionary mapping image IDs to their corresponding ground truth
+            UI component annotations.
+        img_root: The directory path where the image files are stored.
+        img_id: The identifier of the image to visualize. Will be converted to
+                a string if not already.
+    
+    Returns:
+        None. The method displays the annotated image in a window but does not
+        return any value.
+    """
     img_id = str(img_id)
     compos = gt[img_id]
     img = cv2.imread(pjoin(img_root, img_id + '.jpg'))

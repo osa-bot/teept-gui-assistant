@@ -5,6 +5,24 @@ import time
 from config import MONITOR
 
 def monitor_user_action(target_col, target_row):
+    """
+    Monitors user interactions within a target grid area to confirm task completion through timed action validation.
+    
+    This method divides the screen into a 3x3 grid and monitors for mouse clicks and keyboard presses within 
+    a specified target square. When a click is detected in the target area, a timer is started to validate that 
+    the user has engaged with the correct UI element. The timer resets with each subsequent keyboard press, 
+    allowing the system to track ongoing user interaction. The action is considered complete when the timer 
+    expires without interruption, confirming the user has successfully interacted with the designated area 
+    and providing feedback to the server about task progression.
+    
+    Args:
+        target_col (int): The column number (1-3) of the target grid square.
+        target_row (int): The row number (1-3) of the target grid square.
+    
+    Returns:
+        bool: True if the user successfully completed the timed action (timer expired without interruption), 
+            False otherwise.
+    """
     action_completed = False  # Флаг завершения действия
     timer_started = False     # Таймер запускается после клика
 

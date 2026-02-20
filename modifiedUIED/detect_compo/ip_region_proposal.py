@@ -14,9 +14,24 @@ C = Config()
 
 def nesting_inspection(org, grey, compos, ffl_block):
     '''
-    Inspect all big compos through block division by flood-fill
-    :param ffl_block: gradient threshold for flood-fill
-    :return: nesting compos
+    Detect and extract nested UI components within large container elements using flood-fill segmentation.
+    
+    This method analyzes large components (height > 50 pixels) to identify smaller nested UI elements
+    that may be contained within them. By applying flood-fill based block division, it discovers
+    internal structure and component hierarchy, which is essential for accurate UI element mapping
+    and interaction guidance in automated task workflows.
+    
+    Args:
+        org: Original image array for nested component detection context
+        grey: Greyscale image array for gradient-based flood-fill analysis
+        compos: List of detected components to inspect for nesting
+        ffl_block: Gradient threshold parameter for flood-fill algorithm controlling sensitivity
+                  to intensity changes during block division
+    
+    Returns:
+        List of newly detected nested components extracted from large parent components.
+        Parent components that contain non-redundant nested elements are replaced in the
+        original compos list, while redundant nested components are excluded from results.
     '''
     nesting_compos = []
     for i, compo in enumerate(compos):
@@ -37,6 +52,26 @@ def nesting_inspection(org, grey, compos, ffl_block):
 
 
 def to_arr(compos):
+    """
+    Converts a list of detected UI component objects into a serializable dictionary representation.
+    
+    This method transforms component objects into a structured dictionary format that can be
+    easily transmitted and processed by the server for task planning and guidance. It extracts
+    spatial information and component metadata to enable the system to match user descriptions
+    to detected UI elements and provide accurate visual feedback through grid-based overlays.
+    
+    Args:
+        compos: A list of component objects detected from the screenshot, each containing
+            image shape, component id, category/class label, bounding box coordinates,
+            width, and height information.
+    
+    Returns:
+        A dictionary containing the image shape and a list of component dictionaries.
+        Each component dictionary includes the component id, class/category label, bounding
+        box coordinates (column_min, row_min, column_max, row_max), width, and height.
+        This structure enables efficient matching of UI elements for task automation and
+        interactive guidance.
+    """
     img_shape = compos[0].image_shape
     output = {'img_shape': img_shape, 'compos': []}
 
@@ -50,6 +85,31 @@ def to_arr(compos):
     return output
 
 def compo_detection(input_img, uied_params, resize_by_height=800, classifier=None, show=False, wai_key=0):
+    """
+    Detects and extracts UI components from a screenshot to enable task automation and visual guidance.
+    
+    This method processes an input image to identify and extract UI components that can be matched
+    with task instructions and presented to users through visual overlays. It performs image binarization,
+    component detection, filtering, merging, and nesting inspection to produce a comprehensive list of
+    detected UI elements with their spatial properties and relationships.
+    
+    The detected components serve as the foundation for matching user-provided descriptions and
+    generating interactive grid-based guidance for task completion.
+    
+    Args:
+        input_img: Either a file path string to an image or a numpy array representing a screenshot.
+        uied_params: A dictionary containing configuration parameters for component detection, including
+            'min-grad' for gradient threshold, 'min-ele-area' for minimum element area, 'merge-contained-ele'
+            for merging contained elements, and 'ffl-block' for block recognition settings.
+        resize_by_height: The target height in pixels to resize the image to. Defaults to 800.
+        classifier: An optional classifier object for component classification. Defaults to None.
+        show: A boolean flag indicating whether to display intermediate processing results. Defaults to False.
+        wai_key: The wait key value for displaying images, used when show is True. Defaults to 0.
+    
+    Returns:
+        A numpy array representation of the detected UI components, where each row contains information
+        about a detected component including its bounding box coordinates, size, and containment relationships.
+    """
     # Определяем имя файла (или имя по умолчанию для np.array)
     if isinstance(input_img, str):
         name = input_img.split('/')[-1][:-4] if '/' in input_img else input_img.split('\\')[-1][:-4]

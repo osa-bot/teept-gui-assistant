@@ -7,10 +7,40 @@ import lib_ip.ip_detection as det
 
 
 def nothing(x):
+    """
+    Serves as a placeholder operation for conditional task execution flows.
+    
+    This method acts as a no-op handler that can be invoked when no action
+    is required during task automation workflows. It allows the system to
+    gracefully handle scenarios where task instructions or UI interactions
+    may not require any processing, maintaining consistent control flow
+    without performing unnecessary operations.
+    
+    Args:
+        x: An input value representing a task parameter or UI element that
+           does not require processing in the current execution context.
+    
+    Returns:
+        None.
+    """
     pass
 
 
 def get_contour(org, binary):
+    """
+    Detects and extracts contours from a binary mask to identify UI elements for task automation.
+    
+    This method finds external contours in a binary image, filters them by area to eliminate noise,
+    approximates their shapes for cleaner representation, and visualizes them on the original image.
+    This is essential for identifying and locating interactive UI components during task execution.
+    
+    Args:
+        org: The original image on which contours will be drawn.
+        binary: A binary image used for contour detection, typically derived from UI element segmentation.
+    
+    Returns:
+        A copy of the original image with detected contours drawn in red color, highlighting identified UI regions.
+    """
     def cvt_bbox(bbox):
         '''
         x,y,w,h -> colmin, rowmin, colmax, rowmax
